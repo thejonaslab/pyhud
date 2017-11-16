@@ -7,42 +7,110 @@ from Tkinter import *
 from playsound import playsound
 from Queue import Empty, Queue
 
-LEFT_SIDE_EVENT_NUM = 1
-RIGHT_SIDE_EVENT_NUM = 2
+NO_CUE = 0
+RIGHT_VISUAL = 1
+LEFT_VISUAL = 2
+RIGHT_VISUAL_STEREO = 3
+LEFT_VISUAL_STEREO = 4
+RIGHT_VISUAL_RIGHT = 5
+LEFT_VISUAL_LEFT = 6
+NO_VISUAL_STEREO = 7
+NO_VISUAL_RIGHT = 8
+NO_VISUAL_LEFT = 9
+EVENT_NUM_VALUES = {0,1,2,3,4,5,6,7,8,9}
 
 EVENT_STATE_TRUE = 1
 EVENT_STATE_FALSE = 0
+
 
 class ThreadedUdpListener(threading.Thread):
     def __init__(self, queue):
         super(ThreadedUdpListener, self).__init__()
         self.queue = queue
-        self.left_pedestrian = False
-        self.right_pedestrian = False
+        self.left_visual = False
+        self.right_visual = False
+        self.left_audio = False
+        self.right_audio = False
+        self.put_indicator = 10
         
     def push(self):
-        queue.put( (self.left_pedestrian, self.right_pedestrian) )
+        queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
     
     @staticmethod
     def crash_on_bad_response(event_num, event_state):
-        if (event_num != LEFT_SIDE_EVENT_NUM and event_num != RIGHT_SIDE_EVENT_NUM):
-            print("[+] ERROR: Event number not 1 or 2. It was " + str(event_num))
+        if (event_num  not in EVENT_NUM_VALUES):
+            print("[+] ERROR: Event number not valid. It was " + str(event_num))
             exit()
         if (event_state != EVENT_STATE_TRUE and event_state != EVENT_STATE_FALSE):
             print("[+] ERROR: Event state not 1 or 0. It was " + str(event_state))
             exit()
 
     def maybe_queue_msg(self, event_num, event_state_bool):
-        if (event_num == LEFT_SIDE_EVENT_NUM and self.left_pedestrian != event_state_bool):
-            self.left_pedestrian = event_state_bool
-            queue.put( (self.left_pedestrian , self.right_pedestrian ) )
-        elif (event_num == RIGHT_SIDE_EVENT_NUM and self.right_pedestrian != right_pedestrian):
-            self.right_pedestrian = event_state_bool
-            queue.put( (self.left_pedestrian , self.right_pedestrian ) )
-
+        if (event_num == NO_CUE and put_indicator != NO_CUE):
+            self.left_visual = False
+        	self.right_visual = False
+       		self.left_audio = False
+        	self.right_audio = False
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == LEFT_VISUAL and put_indicator != LEFT_VISUAL):
+            self.left_visual = event_state_bool
+        	self.right_visual = False
+       		self.left_audio = False
+        	self.right_audio = False
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == RIGHT_VISUAL and put_indicator != RIGHT_VISUAL):
+            self.left_visual = False
+        	self.right_visual = event_state_bool
+       		self.left_audio = False
+        	self.right_audio = False
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == RIGHT_VISUAL_STEREO and put_indicator != RIGHT_VISUAL_STEREO):
+            self.left_visual = event_state_bool
+        	self.right_visual = False
+       		self.left_audio = event_state_bool
+        	self.right_audio = event_state_bool
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == LEFT_VISUAL_STEREO and put_indicator != LEFT_VISUAL_STEREO):
+            self.left_visual = False
+        	self.right_visual = event_state_bool
+       		self.left_audio = event_state_bool
+        	self.right_audio = event_state_bool
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == RIGHT_VISUAL_RIGHT and put_indicator != RIGHT_VISUAL_RIGHT):
+            self.left_visual = False
+        	self.right_visual = event_state_bool
+       		self.left_audio = False
+        	self.right_audio = event_state_bool
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == LEFT_VISUAL_LEFT and put_indicator != LEFT_VISUAL_LEFT):
+            self.left_visual = event_state_bool
+        	self.right_visual = False
+       		self.left_audio = event_state_bool
+        	self.right_audio = False
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == NO_VISUAL_STEREO and put_indicator != NO_VISUAL_STEREO):
+            self.left_visual = False
+        	self.right_visual = False
+       		self.left_audio = event_state_bool
+        	self.right_audio = event_state_bool
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == NO_VISUAL_RIGHT and put_indicator != NO_VISUAL_RIGHT):
+            self.left_visual = False
+        	self.right_visual = False
+       		self.left_audio = False
+        	self.right_audio = event_state_bool
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        elif (event_num == NO_VISUAL_LEFT and put_indicator != NO_VISUAL_LEFT):
+            self.left_visual = False
+        	self.right_visual = False
+       		self.left_audio = event_state_bool
+        	self.right_audio = False
+            queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
+        
+        
     def run(self):
         dyn_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        dyn_sock.bind( ('0.0.0.0', 5007) )
+        dyn_sock.bind( ('192.168.1.106', 5007) )
         try:
             while True:
                 dyn_data = dyn_sock.recvfrom(4)[0] # 142 values, each 4 bytes, + 640 values each 1 byte
@@ -88,15 +156,15 @@ class Gui(object):
         self.label.after(0, self.self_test)
         self.root.mainloop()
 
-    def maybe_draw(self, left_pedestrian, right_pedestrian):
+    def maybe_draw(self, left_visual, right_visual):
         if (self.graphics):
-            if (left_pedestrian and right_pedestrian):
+            if (left_visual and right_visual):
                 self.label.config(image = self.both_image)
-            elif (left_pedestrian and not right_pedestrian):
+            elif (left_visual and not right_visual):
                 self.label.config(image = self.left_image)
-            elif (not left_pedestrian and right_pedestrian):
+            elif (not left_visual and right_visual):
                 self.label.config(image = self.right_image)
-            elif (not left_pedestrian and not right_pedestrian):
+            elif (not left_visual and not right_visual):
                 self.label.config(image = self.none_image)
             self.root.update()
 
@@ -118,17 +186,17 @@ class Gui(object):
         
         self.label.after(3000, self.event_loop)
 
-    def maybe_play_sound(self, left_pedestrian, right_pedestrian):
+    def maybe_play_sound(self, left_audio, right_audio):
         if (self.audio):
             if (self.mono):
-                if (left_pedestrian or right_pedestrian):
+                if (left_audio or right_audio):
                     self.play_both()
             else: # self.stereo == true
-                if (left_pedestrian and right_pedestrian):
+                if (left_audio and right_audio):
                     self.play_both()
-                elif (left_pedestrian and not right_pedestrian):
+                elif (left_audio and not right_audio):
                     self.play_left()
-                elif (not left_pedestrian and right_pedestrian):
+                elif (not left_audio and right_audio):
                     self.play_right()
     @staticmethod
     def play_right():
@@ -145,11 +213,11 @@ class Gui(object):
     def event_loop(self):
         print '[+] in event loop'
         try:
-            (left_pedestrian, right_pedestrian) = queue.get(True, 1)
+            (left_visual, right_visual, left_audio, right_audio) = queue.get(True, 1)
             if (self.debug):
-                print("[+] Received notification left_pedestrian: {0!s} right pedestrian: {1!s}".format(left_pedestrian, right_pedestrian))
-            self.maybe_draw(left_pedestrian, right_pedestrian)
-            self.maybe_play_sound(left_pedestrian, right_pedestrian)
+                print("[+] Received notification left_visual: {0!s}, right_visual: {1!s}, left_audio: {2!s}, right_audio: {3!s}".format(left_visual, right_visual, left_audio, right_audio))
+            self.maybe_draw(left_visual, right_visual)
+            self.maybe_play_sound(left_audio, right_audio)
             self.label.after(1, self.event_loop)
         except Empty:
             self.label.after(1, self.event_loop)

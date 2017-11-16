@@ -3,6 +3,7 @@
 import threading
 import socket
 import argparse
+import struct
 from Tkinter import *
 from playsound import playsound
 from Queue import Empty, Queue
@@ -114,8 +115,8 @@ class ThreadedUdpListener(threading.Thread):
         try:
             while True:
                 dyn_data = dyn_sock.recvfrom(4)[0] # 142 values, each 4 bytes, + 640 values each 1 byte
-                event_num = struct.unpack('s', dyn_data[0:2])[0] # little endian 0-4
-                event_state = struct.unpack('s', dyn_data[2:4])[0]
+                event_num = struct.unpack('h', dyn_data[0:2])[0] # little endian 0-4
+                event_state = struct.unpack('h', dyn_data[2:4])[0]
                 crash_on_bad_response(event_num, event_state)
                 event_state_bool = false
                 if (event_state == EVENT_STATE_TRUE):
@@ -139,12 +140,13 @@ class Gui(object):
         self.audio = audio
         # True if the HUD should play audio on left and right channels
         self.mono = mono
+        self.debug = debug
         
         self.root = Tk()
         # HUD dimensions
         self.root.geometry("848x480")
         # make window transparent
-        self.root.attributes('-alpha', 0.3)
+        self.root.attributes('-alpha', 0.8)
         
         self.none_image = PhotoImage(file = "images/none.gif")
         self.left_image = PhotoImage(file = "images/left.gif")

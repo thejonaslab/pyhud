@@ -33,6 +33,7 @@ class ThreadedUdpListener(threading.Thread):
 		self.left_audio = False
 		self.right_audio = False
 		self.put_indicator = 10
+
 		
 	def push(self):
 		queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
@@ -47,65 +48,75 @@ class ThreadedUdpListener(threading.Thread):
 			exit()
 
 	def maybe_queue_msg(self, event_num, event_state_bool):
-		if (event_num == NO_CUE and put_indicator != NO_CUE):
+		if (event_num == NO_CUE and self.put_indicator != NO_CUE):
 			self.left_visual = False
 			self.right_visual = False
 			self.left_audio = False
 			self.right_audio = False
+			self.put_indicator = NO_CUE
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == LEFT_VISUAL and put_indicator != LEFT_VISUAL):
+		elif (event_num == LEFT_VISUAL and self.put_indicator != LEFT_VISUAL):
 			self.left_visual = event_state_bool
 			self.right_visual = False
 			self.left_audio = False
 			self.right_audio = False
+			self.put_indicator = LEFT_VISUAL
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == RIGHT_VISUAL and put_indicator != RIGHT_VISUAL):
+		elif (event_num == RIGHT_VISUAL and self.put_indicator != RIGHT_VISUAL):
 			self.left_visual = False
 			self.right_visual = event_state_bool
 			self.left_audio = False
 			self.right_audio = False
+			self.put_indicator = RIGHT_VISUAL
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == RIGHT_VISUAL_STEREO and put_indicator != RIGHT_VISUAL_STEREO):
+		elif (event_num == RIGHT_VISUAL_STEREO and self.put_indicator != RIGHT_VISUAL_STEREO):
 			self.left_visual = event_state_bool
 			self.right_visual = False
 			self.left_audio = event_state_bool
 			self.right_audio = event_state_bool
+			self.put_indicator = RIGHT_VISUAL_STEREO
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == LEFT_VISUAL_STEREO and put_indicator != LEFT_VISUAL_STEREO):
+		elif (event_num == LEFT_VISUAL_STEREO and self.put_indicator != LEFT_VISUAL_STEREO):
 			self.left_visual = False
 			self.right_visual = event_state_bool
 			self.left_audio = event_state_bool
 			self.right_audio = event_state_bool
+			self.put_indicator = LEFT_VISUAL_STEREO
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == RIGHT_VISUAL_RIGHT and put_indicator != RIGHT_VISUAL_RIGHT):
+		elif (event_num == RIGHT_VISUAL_RIGHT and self.put_indicator != RIGHT_VISUAL_RIGHT):
 			self.left_visual = False
 			self.right_visual = event_state_bool
 			self.left_audio = False
 			self.right_audio = event_state_bool
+			self.put_indicator = RIGHT_VISUAL_RIGHT
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == LEFT_VISUAL_LEFT and put_indicator != LEFT_VISUAL_LEFT):
+		elif (event_num == LEFT_VISUAL_LEFT and self.put_indicator != LEFT_VISUAL_LEFT):
 			self.left_visual = event_state_bool
 			self.right_visual = False
 			self.left_audio = event_state_bool
 			self.right_audio = False
+			self.put_indicator = LEFT_VISUAL_LEFT
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == NO_VISUAL_STEREO and put_indicator != NO_VISUAL_STEREO):
+		elif (event_num == NO_VISUAL_STEREO and self.put_indicator != NO_VISUAL_STEREO):
 			self.left_visual = False
 			self.right_visual = False
 			self.left_audio = event_state_bool
 			self.right_audio = event_state_bool
+			self.put_indicator = NO_VISUAL_STEREO
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == NO_VISUAL_RIGHT and put_indicator != NO_VISUAL_RIGHT):
+		elif (event_num == NO_VISUAL_RIGHT and self.put_indicator != NO_VISUAL_RIGHT):
 			self.left_visual = False
 			self.right_visual = False
 			self.left_audio = False
 			self.right_audio = event_state_bool
+			self.put_indicator = NO_VISUAL_RIGHT
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
-		elif (event_num == NO_VISUAL_LEFT and put_indicator != NO_VISUAL_LEFT):
+		elif (event_num == NO_VISUAL_LEFT and self.put_indicator != NO_VISUAL_LEFT):
 			self.left_visual = False
 			self.right_visual = False
 			self.left_audio = event_state_bool
 			self.right_audio = False
+			self.put_indicator = NO_VISUAL_LEFT
 			queue.put( (self.left_visual, self.right_visual, self.left_audio, self.right_audio) )
 		
 		
@@ -113,14 +124,16 @@ class ThreadedUdpListener(threading.Thread):
 		dyn_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		dyn_sock.bind( ('192.168.1.106', 5007) )
 		try:
+			event_num = 0
 			while True:
 				dyn_data = dyn_sock.recvfrom(4)[0] # 142 values, each 4 bytes, + 640 values each 1 byte
 				event_num = struct.unpack('h', dyn_data[0:2])[0] # little endian 0-4
 				event_state = struct.unpack('h', dyn_data[2:4])[0]
-				crash_on_bad_response(event_num, event_state)
-				event_state_bool = false
+				#print('Event Num: ', event_num)
+				self.crash_on_bad_response(event_num, event_state)
+				event_state_bool = False
 				if (event_state == EVENT_STATE_TRUE):
-					event_state_bool = true
+					event_state_bool = True
 				self.maybe_queue_msg(event_num, event_state_bool)				 
 		except (KeyboardInterrupt, SystemExit):
 			print("[+] Keyboard interrupt. Exiting UDP server.")
@@ -180,11 +193,11 @@ class Gui(object):
 		self.maybe_draw(False, False)
 		self.label.after(500)
 
-		self.maybe_play_sound(True, False)
-		self.label.after(3000)
-		self.maybe_play_sound(False, True)
-		self.label.after(3000)
-		self.maybe_play_sound(True, True)
+		#self.maybe_play_sound(True, False)
+		#self.label.after(1000)
+		#self.maybe_play_sound(False, True)
+		#self.label.after(1000)
+		#self.maybe_play_sound(True, True)
 		
 		self.label.after(3000, self.event_loop)
 

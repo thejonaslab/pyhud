@@ -54,26 +54,27 @@ class ThreadedUdpListener(threading.Thread):
 				dyn_data = dyn_sock.recvfrom(4)[0] # 142 values, each 4 bytes, + 640 values each 1 byte
 				event_num = struct.unpack('h', dyn_data[0:2])[0] # little endian 0-4
 				event_status = struct.unpack('h', dyn_data[2:4])[0]
+				#print('Event Num: ', event_num)
 				self.crash_on_bad_response(event_num, event_status)
 				if (event_status):
-					print(event_num)
 					self.left_visual, self.right_visual, self.left_audio, self.right_audio = EVENT_DICT[event_num]		 
-					self.push()
-					self.left_visual, self.right_visual, self.left_audio, self.right_audio = EVENT_DICT[0]		 
 		except (KeyboardInterrupt, SystemExit):
-			print("[-] Keyboard interrupt. Exiting UDP server.")
+			print("[+] Keyboard interrupt. Exiting UDP server.")
 			raise
 
 class Gui(object):
+	'''
+	Takes a Queue that holds tuples from the UDP listener:
+	(side, boolean) where the first value is an integer and the second is a boolean
+	'''
 	def __init__(self, queue):
-		# Queue to communicate between UDP listener and the GUI
+		# Queue to communicate betweemn UDP listenter and the GUI
 		self.queue = queue
 		self.root = Tk()
 		# HUD dimensions
 		self.root.geometry("848x480")
 		# make window transparent
-		self.root.attributes('-alpha', 0.3)
-		self.root.configure(background='black')
+		self.root.attributes('-alpha', 0.8)
 		
 		self.none_image = PhotoImage(file = "images/none.gif")
 		self.left_image = PhotoImage(file = "images/left.gif")
@@ -94,7 +95,6 @@ class Gui(object):
 			self.label.config(image = self.right_image)
 		elif (not left_visual and not right_visual):
 			self.label.config(image = self.none_image)
-		self.label.after(1000)
 		self.root.update()
 
 	def self_test(self):
@@ -136,19 +136,17 @@ class Gui(object):
 		playsound('sounds/stereo.wav')
 
 	def event_loop(self):
-		#print('[+] in event loop')
+		print('[+] in event loop')
 		try:
-			(left_visual, right_visual, left_audio, right_audio) = queue.get(True)
+			(left_visual, right_visual, left_audio, right_audio) = queue.get(True, 1)
 			print("[+] Received notification left_visual: {0!s}, right_visual: {1!s}, left_audio: {2!s}, right_audio: {3!s}".format(left_visual, right_visual, left_audio, right_audio))
 			self.maybe_draw(left_visual, right_visual)
 			self.maybe_play_sound(left_audio, right_audio)
+			self.label.after(1, self.event_loop)
+		except Empty:
+			self.label.after(1, self.event_loop)
 		except (KeyboardInterrupt, SystemExit):
-			print("[-] Keyboard Interrupt")
-			self.root.destroy()
-			self.root.quit()
-			raise
-		except:
-			print("[-] Queue Error")
+			print("[+] Keyboard interrupt. Exiting HUD.")
 			self.root.destroy()
 			self.root.quit()
 			raise
